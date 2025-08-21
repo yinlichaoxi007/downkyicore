@@ -79,6 +79,22 @@ public class ViewNetworkViewModel : ViewModelBase
         set => SetProperty(ref _selectedMaxCurrentDownload, value);
     }
 
+    private NetworkProxy _networkProxy;
+
+    public NetworkProxy NetworkProxy
+    {
+        get => _networkProxy;
+        set => SetProperty(ref _networkProxy, value);
+    }
+
+    private string? _customNetworkProxy;
+
+    public string? CustomNetworkProxy
+    {
+        get => _customNetworkProxy;
+        set => SetProperty(ref _customNetworkProxy, value);
+    }
+
     private List<int> _splits;
 
     public List<int> Splits
@@ -337,6 +353,10 @@ public class ViewNetworkViewModel : ViewModelBase
                 break;
         }
 
+        NetworkProxy = SettingsManager.GetInstance().GetNetworkProxy();
+
+        CustomNetworkProxy = SettingsManager.GetInstance().GetCustomProxy();
+
         // builtin同时下载数
         SelectedMaxCurrentDownload = SettingsManager.GetInstance().GetMaxCurrentDownloads();
 
@@ -472,6 +492,40 @@ public class ViewNetworkViewModel : ViewModelBase
         }
     }
 
+    private DelegateCommand<object>? _networkProxyCommand;
+
+    public DelegateCommand<object> NetworkProxyCommand => _networkProxyCommand ??= new DelegateCommand<object>(ExecuteNetworkProxyCommand);
+
+    private async void ExecuteNetworkProxyCommand(object obj)
+    {
+        if (obj is not NetworkProxy networkProxy) return;
+        NetworkProxy = networkProxy;
+        var isSucceed = SettingsManager.GetInstance().SetNetworkProxy(networkProxy);
+        PublishTip(isSucceed);
+        var alertService = new AlertService(DialogService);
+        var result = await alertService.ShowInfo(DictionaryResource.GetString("ConfirmReboot"));
+        if (result == ButtonResult.OK)
+        {
+            (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+        }
+    }
+    
+    // builtin的http代理的地址事件
+    private DelegateCommand<string>? _customNetworkProxyCommand;
+
+    public DelegateCommand<string> CustomNetworkProxyCommand => _customNetworkProxyCommand ??= new DelegateCommand<string>(ExecuteCustomNetworkProxyCommand);
+
+    /// <summary>
+    /// builtin的http代理的地址事件
+    /// </summary>
+    /// <param name="parameter"></param>
+    private void ExecuteCustomNetworkProxyCommand(string parameter)
+    {
+        var isSucceed = SettingsManager.GetInstance().SetCustomProxy(parameter);
+        PublishTip(isSucceed);
+    }
+    
+
     // builtin同时下载数事件
     private DelegateCommand<object>? _maxCurrentDownloadsCommand;
 
@@ -481,12 +535,19 @@ public class ViewNetworkViewModel : ViewModelBase
     /// builtin同时下载数事件
     /// </summary>
     /// <param name="parameter"></param>
-    private void ExecuteMaxCurrentDownloadsCommand(object parameter)
+    private async void ExecuteMaxCurrentDownloadsCommand(object? parameter)
     {
         // SelectedMaxCurrentDownload = (int)parameter;
-
+        if(parameter == null) return;
         var isSucceed = SettingsManager.GetInstance().SetMaxCurrentDownloads(SelectedMaxCurrentDownload);
         PublishTip(isSucceed);
+        
+        var alertService = new AlertService(DialogService);
+        var result = await alertService.ShowInfo(DictionaryResource.GetString("ConfirmReboot"));
+        if (result == ButtonResult.OK)
+        {
+            (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+        }
     }
 
     // builtin最大线程数事件
@@ -514,11 +575,12 @@ public class ViewNetworkViewModel : ViewModelBase
     /// <summary>
     /// 是否开启builtin http代理事件
     /// </summary>
-    private void ExecuteIsHttpProxyCommand()
+    private async void ExecuteIsHttpProxyCommand()
     {
         var isHttpProxy = IsHttpProxy ? AllowStatus.Yes : AllowStatus.No;
 
         var isSucceed = SettingsManager.GetInstance().SetIsHttpProxy(isHttpProxy);
+        
         PublishTip(isSucceed);
     }
 
@@ -640,13 +702,19 @@ public class ViewNetworkViewModel : ViewModelBase
     /// Aria同时下载数事件
     /// </summary>
     /// <param name="parameter"></param>
-    private void ExecuteAriaMaxConcurrentDownloadsCommand(object? parameter)
+    private async void ExecuteAriaMaxConcurrentDownloadsCommand(object? parameter)
     {
         if (parameter == null) return;
         SelectedAriaMaxConcurrentDownload = (int)parameter;
 
         var isSucceed = SettingsManager.GetInstance().SetMaxCurrentDownloads(SelectedAriaMaxConcurrentDownload);
         PublishTip(isSucceed);
+        var alertService = new AlertService(DialogService);
+        var result = await alertService.ShowInfo(DictionaryResource.GetString("ConfirmReboot"));
+        if (result == ButtonResult.OK)
+        {
+            (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+        }
     }
 
     // Aria最大线程数事件

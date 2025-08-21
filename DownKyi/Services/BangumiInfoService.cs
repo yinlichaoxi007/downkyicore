@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Avalonia.Threading;
 using DownKyi.Core.BiliApi.Bangumi;
@@ -8,7 +9,6 @@ using DownKyi.Core.BiliApi.BiliUtils;
 using DownKyi.Core.BiliApi.Models;
 using DownKyi.Core.BiliApi.VideoStream;
 using DownKyi.Core.Settings;
-using DownKyi.Core.Storage;
 using DownKyi.Core.Utils;
 using DownKyi.Utils;
 using DownKyi.ViewModels.PageViewModels;
@@ -105,11 +105,12 @@ public class BangumiInfoService : IInfoService
                 Avid = episode.Aid,
                 Bvid = episode.Bvid,
                 Cid = episode.Cid,
-                EpisodeId = -1,
+                EpisodeId = episode.EpisodeId,
                 FirstFrame = episode.Cover,
                 Order = order,
                 Name = name,
-                Duration = "N/A"
+                Duration = "N/A",
+                LazyTags = new Lazy<List<string>>(_bangumiSeason.Styles?.ToList())
             };
 
             // UP主信息
@@ -138,7 +139,7 @@ public class BangumiInfoService : IInfoService
             var startTime = TimeZoneInfo.ConvertTimeFromUtc(new DateTime(1970, 1, 1), TimeZoneInfo.Local); // 当地时区
             var dateTime = startTime.AddSeconds(episode.PubTime);
             page.PublishTime = dateTime.ToString(timeFormat);
-
+            page.OriginalPublishTime = dateTime;
             pages.Add(page);
         }
 
@@ -198,11 +199,12 @@ public class BangumiInfoService : IInfoService
                     Avid = episode.Aid,
                     Bvid = episode.Bvid,
                     Cid = episode.Cid,
-                    EpisodeId = -1,
+                    EpisodeId = episode.EpisodeId,
                     FirstFrame = episode.Cover,
                     Order = order,
                     Name = name,
-                    Duration = "N/A"
+                    Duration = "N/A",
+                    LazyTags = new Lazy<List<string>>(_bangumiSeason.Styles?.ToList())
                 };
 
                 // UP主信息
@@ -230,8 +232,8 @@ public class BangumiInfoService : IInfoService
                 // 视频发布时间
                 var startTime = TimeZoneInfo.ConvertTimeFromUtc(new DateTime(1970, 1, 1), TimeZoneInfo.Local); // 当地时区
                 var dateTime = startTime.AddSeconds(episode.PubTime);
+                page.OriginalPublishTime = dateTime;
                 page.PublishTime = dateTime.ToString(timeFormat);
-
                 pages.Add(page);
             }
 
@@ -253,10 +255,10 @@ public class BangumiInfoService : IInfoService
     /// <param name="page"></param>
     public void GetVideoStream(VideoPage page)
     {
-        var playUrl = VideoStream.GetBangumiPlayUrl(page.Avid, page.Bvid, page.Cid);
+        var playUrl = VideoStream.GetBangumiPlayUrl(page.EpisodeId);
         Dispatcher.UIThread.Invoke(() => Utils.VideoPageInfo(playUrl, page));
     }
-
+    
     /// <summary>
     /// 获取视频信息
     /// </summary>
@@ -296,7 +298,7 @@ public class BangumiInfoService : IInfoService
             videoInfoView.TypeId = BangumiType.TypeId[_bangumiSeason.Type];
 
             videoInfoView.VideoZone = DictionaryResource.GetString(BangumiType.Type[_bangumiSeason.Type]);
-
+            
             videoInfoView.PlayNumber = Format.FormatNumber(_bangumiSeason.Stat.Views);
             videoInfoView.DanmakuNumber = Format.FormatNumber(_bangumiSeason.Stat.Danmakus);
             videoInfoView.LikeNumber = Format.FormatNumber(_bangumiSeason.Stat.Likes);
@@ -306,9 +308,10 @@ public class BangumiInfoService : IInfoService
             videoInfoView.ReplyNumber = Format.FormatNumber(_bangumiSeason.Stat.Reply);
             videoInfoView.Description = _bangumiSeason.Evaluate;
 
+            videoInfoView.Score = _bangumiSeason.Rating?.Score;
             videoInfoView.UpName = upName;
-            videoInfoView.UpHeader = _bangumiSeason.UpInfo.Avatar;
-            videoInfoView.UpperMid = _bangumiSeason.UpInfo.Mid;
+            videoInfoView.UpHeader = _bangumiSeason.UpInfo?.Avatar;
+            videoInfoView.UpperMid = _bangumiSeason.UpInfo?.Mid ?? -1;
         });
 
         return videoInfoView;

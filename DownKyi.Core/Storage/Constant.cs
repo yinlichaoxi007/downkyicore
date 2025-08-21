@@ -44,6 +44,8 @@ internal static class Constant
     // 历史(搜索、下载) (加密)
     public static string Download { get; } = Path.Combine(Database, "Download.db");
 
+    public static string DbPath { get; } = Path.Combine(Database, "Data.db");
+
     // 配置
     public static string Config { get; } = Path.Combine(Root, "Config");
 

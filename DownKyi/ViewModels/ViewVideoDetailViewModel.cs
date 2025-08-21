@@ -153,7 +153,7 @@ public class ViewVideoDetailViewModel : ViewModelBase
     /// <summary>
     /// 返回
     /// </summary>
-    private void ExecuteBackSpace()
+    protected internal override void ExecuteBackSpace()
     {
         var parameter = new NavigationParam
         {
@@ -190,7 +190,7 @@ public class ViewVideoDetailViewModel : ViewModelBase
 
 
     private DelegateCommand? _inputSearchCommand;
-    
+
 
     public DelegateCommand InputSearchCommand => _inputSearchCommand ??= new DelegateCommand(ExecuteInputSearchCommand);
 
@@ -260,6 +260,7 @@ public class ViewVideoDetailViewModel : ViewModelBase
         {
             Console.PrintLine("InputCommand()发生异常: {0}", e);
             LogManager.Error(Tag, e);
+            EventAggregator.GetEvent<MessageEvent>().Publish(e.Message);
 
             LoadingVisibility = false;
             ContentVisibility = false;
@@ -330,14 +331,27 @@ public class ViewVideoDetailViewModel : ViewModelBase
     /// <param name="parameter"></param>
     private void ExecuteVideoSectionsCommand(object parameter)
     {
-        if (parameter is not VideoSection section)
+        if (parameter is not DataGrid grid)
         {
             return;
         }
 
-        var isSelectAll = section.VideoPages.All(page => page.IsSelected);
+        var selectedSection = VideoSections.FirstOrDefault(x => x.IsSelected);
+        if (selectedSection?.VideoPages == null)
+        {
+            IsSelectAll = false;
+            return;
+        }
 
-        IsSelectAll = section.VideoPages.Count != 0 && isSelectAll;
+        var selectedPages = selectedSection.VideoPages
+            .Where(x => x.IsSelected).ToList();
+        foreach (var page in selectedPages)
+        {
+            grid.SelectedItems.Add(page);
+        }
+
+        IsSelectAll = selectedSection.VideoPages.Count > 0 &&
+                      selectedPages.Count == selectedSection.VideoPages.Count;
     }
 
     // 视频page选择事件
@@ -357,7 +371,7 @@ public class ViewVideoDetailViewModel : ViewModelBase
         }
 
         var section = VideoSections.FirstOrDefault(item => item.IsSelected);
-       
+
         if (section == null)
         {
             return;
@@ -398,7 +412,7 @@ public class ViewVideoDetailViewModel : ViewModelBase
 
     // 解析视频流事件
     private DelegateCommand<object>? _parseCommand;
-    
+
     public DelegateCommand<object> ParseCommand => _parseCommand ??= new DelegateCommand<object>(ExecuteParseCommand, CanExecuteParseCommand);
 
     /// <summary>
@@ -427,6 +441,7 @@ public class ViewVideoDetailViewModel : ViewModelBase
         {
             Console.PrintLine("ParseCommand()发生异常: {0}", e);
             LogManager.Error(Tag, e);
+            EventAggregator.GetEvent<MessageEvent>().Publish(e.Message);
 
             LoadingVisibility = false;
         }
@@ -546,6 +561,7 @@ public class ViewVideoDetailViewModel : ViewModelBase
         {
             Console.PrintLine("ParseCommand()发生异常: {0}", e);
             LogManager.Error(Tag, e);
+            EventAggregator.GetEvent<MessageEvent>().Publish(e.Message);
 
             LoadingVisibility = false;
         }
@@ -597,8 +613,7 @@ public class ViewVideoDetailViewModel : ViewModelBase
         VideoSections.Clear();
         CaCheVideoSections.Clear();
     }
-    
-   
+
 
     /// <summary>
     /// 更新页面的统一方法
@@ -612,8 +627,8 @@ public class ViewVideoDetailViewModel : ViewModelBase
         if (_infoService == null || refresh)
         {
             // 视频
-            if (ParseEntrance.IsAvUrl(input) || ParseEntrance.IsBvUrl(input) 
-                || ParseEntrance.IsAvId(input) || ParseEntrance.IsBvId(input))
+            if (ParseEntrance.IsAvUrl(input) || ParseEntrance.IsBvUrl(input)
+                                             || ParseEntrance.IsAvId(input) || ParseEntrance.IsBvId(input))
             {
                 _infoService = new VideoInfoService(input);
             }

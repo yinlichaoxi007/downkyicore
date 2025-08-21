@@ -215,15 +215,14 @@ public class ViewMyFavoritesViewModel : ViewModelBase
     /// <summary>
     /// 返回事件
     /// </summary>
-    private void ExecuteBackSpace()
+    protected internal override void ExecuteBackSpace()
     {
         InitView();
 
         ArrowBack.Fill = DictionaryResource.GetColor("ColorText");
-
         // 结束任务
-        _tokenSource1.Cancel();
-        _tokenSource2.Cancel();
+        _tokenSource1?.Cancel();
+        _tokenSource2?.Cancel();
 
         var parameter = new NavigationParam
         {
