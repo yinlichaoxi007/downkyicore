@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Web;
 using DownKyi.Core.BiliApi.Login;
 using DownKyi.Core.Logging;
 using DownKyi.Core.Settings;
@@ -21,7 +22,7 @@ public static class WebClient
             PooledConnectionLifetime = TimeSpan.FromMinutes(10),
             PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
             AutomaticDecompression = DecompressionMethods.All,
-            ConnectTimeout = TimeSpan.FromSeconds(10)
+            ConnectTimeout = TimeSpan.FromSeconds(3)
         };
         switch (SettingsManager.GetInstance().GetNetworkProxy())
         {
@@ -77,7 +78,7 @@ public static class WebClient
         _bvuid4 = spi?.Data?.Bvuid4;
     }
 
-    public static string RequestWeb(string url, string? referer = null, string method = "GET", Dictionary<string, object?>? parameters = null, int retry = 3, bool json = false)
+    public static string RequestWeb(string url, string? referer = null, string method = "GET", Dictionary<string, object?>? parameters = null, int retry = 2, bool json = false)
     {
         if (retry <= 0)
         {
@@ -106,12 +107,12 @@ public static class WebClient
 
                 if (!string.IsNullOrEmpty(_bvuid3))
                 {
-                    cookies.Add(new DownKyiCookie("buvid3", _bvuid3));
+                    cookies.Add(new DownKyiCookie("buvid3", HttpUtility.UrlEncode(_bvuid3)));
                 }
 
                 if (!string.IsNullOrEmpty(_bvuid4))
                 {
-                    cookies.Add(new DownKyiCookie("buvid4", _bvuid4));
+                    cookies.Add(new DownKyiCookie("buvid4", HttpUtility.UrlEncode(_bvuid4)));
                 }
 
                 if (cookies.Count > 0)
